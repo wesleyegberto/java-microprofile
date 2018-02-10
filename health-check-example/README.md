@@ -21,7 +21,7 @@ See the app's health
 
 
 
-### Links`
+### Links
 
 * Spec: https://github.com/eclipse/microprofile-health
 * Blog: https://developers.redhat.com/blog/2017/10/17/monitoring-aspects-eclipse-microprofile-1-2
