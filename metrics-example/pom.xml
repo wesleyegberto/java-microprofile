@@ -1,0 +1,156 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.github.wesleyegberto.microprofile</groupId>
+	<artifactId>metrics-example</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<packaging>war</packaging>
+	<properties>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<failOnMissingWebXml>false</failOnMissingWebXml>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.eclipse.microprofile</groupId>
+			<artifactId>microprofile</artifactId>
+			<version>1.3</version>
+			<type>pom</type>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+	<build>
+		<finalName>metrics-example</finalName>
+	</build>
+
+	<profiles>
+		<!-- Wildfly Swarm -->
+		<profile>
+			<id>wildfly-swarm</id>
+			<properties>
+				<version.wildfly-swarm>2018.1.0</version.wildfly-swarm>
+			</properties>
+			<dependencies>
+				<!-- Add the Metrics fraction -->
+				<dependency>
+					<groupId>org.wildfly.swarm</groupId>
+					<artifactId>microprofile-metrics</artifactId>
+					<version>${version.wildfly-swarm}</version>
+				</dependency>
+				<!-- added because with Metrics fraction it didn't recognize the needed 
+					to JAX-RS -->
+				<dependency>
+					<groupId>org.wildfly.swarm</groupId>
+					<artifactId>jaxrs</artifactId>
+					<version>${version.wildfly-swarm}</version>
+				</dependency>
+			</dependencies>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.wildfly.swarm</groupId>
+						<artifactId>wildfly-swarm-plugin</artifactId>
+						<version>${version.wildfly-swarm}</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>package</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Payara Micro (5.Beta2 supports MicroProfile 1.2) -->
+		<profile>
+			<id>payara-micro</id>
+			<properties>
+				<payara.version>5.Beta2</payara.version>
+			</properties>
+			<build>
+				<finalName>ROOT</finalName>
+				<plugins>
+					<!-- 
+						Bundle the UberJar (but use context path of artifactId + version)
+						Docs: https://docs.payara.fish/documentation/ecosystem/maven-plugin.html	
+					-->
+					<plugin>
+						<groupId>fish.payara.maven.plugins</groupId>
+						<artifactId>payara-micro-maven-plugin</artifactId>
+						<version>1.0.0</version>
+						<executions>
+							<execution>
+								<id>bundle</id>
+								<phase>install</phase>
+								<goals>
+									<goal>bundle</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<payaraVersion>${payara.version}</payaraVersion>
+							<useUberJar>true</useUberJar>
+							<!-- WAR will be added automatically -->
+						</configuration>
+					</plugin>
+					 
+					<!-- Old way to bundle UberJar (can eliminate the context path) -->
+					<!-- Copy the payara-micro to target and bundle the UberJar -->
+					<plugin>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<version>2.6</version>
+						<executions>
+							<execution>
+								<id>copy-payara-micro</id>
+								<goals>
+									<goal>copy</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>target</outputDirectory>
+									<stripVersion>true</stripVersion>
+									<silent>true</silent>
+									<artifactItems>
+										<artifactItem>
+											<groupId>fish.payara.extras</groupId>
+											<artifactId>payara-micro</artifactId>
+                    						<version>${payara.version}</version>
+											<type>jar</type>
+										</artifactItem>
+									</artifactItems>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>1.6.0</version>
+						<executions>
+							<execution>
+								<id>bundle</id>
+								<phase>install</phase>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<executable>/usr/lib/jvm/java-8-oracle/bin/java</executable>
+							<!-- this will execute the payara-micro to generate the UberJar (slower) -->
+							<arguments>
+								<argument>-jar</argument>
+								<argument>target/payara-micro.jar</argument>
+								<argument>--deploy</argument>
+								<argument>target/${project.build.finalName}.war</argument>
+								<argument>--outputUberJar</argument>
+								<argument>target/${project.artifactId}.jar</argument>
+							</arguments>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>
