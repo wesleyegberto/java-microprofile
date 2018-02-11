@@ -47,14 +47,22 @@
 				</plugins>
 			</build>
 		</profile>
-		<!-- Payara Micro -->
+
+		<!-- Payara Micro (5.Beta2 supports MicroProfile 1.2) -->
 		<profile>
 			<id>payara-micro</id>
 			<properties>
 				<payara.version>5.Beta2</payara.version>
 			</properties>
 			<build>
+				<!-- To not use a context-path -->
+				<finalName>ROOT</finalName>
+				<!-- Copy the payara-micro to target and bundle the UberJar -->
 				<plugins>
+					<!-- 
+						Bundle the UberJar (but use context path of artifactId + version)
+						Docs: https://docs.payara.fish/documentation/ecosystem/maven-plugin.html	
+					-->
 					<plugin>
 						<groupId>fish.payara.maven.plugins</groupId>
 						<artifactId>payara-micro-maven-plugin</artifactId>
@@ -70,6 +78,62 @@
 						</executions>
 						<configuration>
 							<payaraVersion>${payara.version}</payaraVersion>
+							<useUberJar>true</useUberJar>
+							<!-- WAR will be added automatically -->
+						</configuration>
+					</plugin>
+					 
+					<!-- Old way to bundle UberJar (can eliminate the context path) -->
+					<!-- Copy the payara-micro to target and bundle the UberJar -->
+					<plugin>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<version>2.6</version>
+						<executions>
+							<execution>
+								<id>copy-payara-micro</id>
+								<goals>
+									<goal>copy</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>target</outputDirectory>
+									<stripVersion>true</stripVersion>
+									<silent>true</silent>
+									<artifactItems>
+										<artifactItem>
+											<groupId>fish.payara.extras</groupId>
+											<artifactId>payara-micro</artifactId>
+                    						<version>${payara.version}</version>
+											<type>jar</type>
+										</artifactItem>
+									</artifactItems>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>1.6.0</version>
+						<executions>
+							<execution>
+								<id>bundle</id>
+								<phase>install</phase>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<executable>/usr/lib/jvm/java-8-oracle/bin/java</executable>
+							<!-- this will execute the payara-micro to generate the UberJar (slower) -->
+							<arguments>
+								<argument>-jar</argument>
+								<argument>target/payara-micro.jar</argument>
+								<argument>--deploy</argument>
+								<argument>target/${project.build.finalName}.war</argument>
+								<argument>--outputUberJar</argument>
+								<argument>target/${project.artifactId}.jar</argument>
+							</arguments>
 						</configuration>
 					</plugin>
 				</plugins>
