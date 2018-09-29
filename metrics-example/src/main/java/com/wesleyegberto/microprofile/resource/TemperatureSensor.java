@@ -12,5 +12,4 @@ public class TemperatureSensor {
 	public double readValue() {
 		return 20 + Math.random() * 5;
 	}
-
 }
